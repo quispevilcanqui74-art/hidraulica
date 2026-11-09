@@ -1,0 +1,61 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'pe.hidrocalculo.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'pe.hidrocalculo.app'
+        minSdk 24
+        targetSdk 34
+        versionCode (project.findProperty('versionCode') ?: '1').toInteger()
+        versionName (project.findProperty('versionName') ?: '1.0.0')
+    }
+
+    // Firma de release: solo si se definen las variables de entorno (ver README).
+    // Sin ellas, el APK "release" se firma con la clave de depuración y se puede instalar igual.
+    signingConfigs {
+        release {
+            if (System.getenv('KEYSTORE_PATH')) {
+                storeFile file(System.getenv('KEYSTORE_PATH'))
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv('KEYSTORE_PATH') ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            // La app web vive en ../index.html (única fuente) y se copia a los assets al compilar.
+            assets.srcDirs += ["$buildDir/generated/webassets"]
+        }
+    }
+}
+
+tasks.register('copyWebAssets', Copy) {
+    from("$rootDir/../index.html")
+    into("$buildDir/generated/webassets")
+}
+
+android.applicationVariants.all { variant ->
+    variant.mergeAssetsProvider.configure { dependsOn tasks.named('copyWebAssets') }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}
